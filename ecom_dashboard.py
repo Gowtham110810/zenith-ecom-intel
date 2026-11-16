@@ -2,6 +2,7 @@ import sqlite3
 import urllib.parse
 import pandas as pd
 import streamlit as st
+import random
 import central_core
 import price_tracker
 import ecom_lead_hunter
@@ -11,6 +12,10 @@ central_core.init_databases()
 
 if "ecom_leads" not in st.session_state:
     st.session_state.ecom_leads = []
+if "auto_niche" not in st.session_state:
+    st.session_state.auto_niche = ""
+if "auto_city" not in st.session_state:
+    st.session_state.auto_city = ""
 
 st.title("📈 Zenith E-Commerce Competitor Price & Stock Spy")
 st.caption("Rank 2 B2B SaaS: 24/7 Competitor Price & Inventory Monitoring + Instant Telegram Alerts + D2C Auto-Lead Hunter")
@@ -93,9 +98,9 @@ with tab2:
             else:
                 st.error(msg)
 
-# --- TAB 3: D2C LEAD HUNTER ---
+# --- TAB 3: 100% AUTOMATED D2C LEAD HUNTER ---
 with tab3:
-    st.subheader("Discover D2C Brands & Pitch Competitor Intelligence (zenith.ai.gowtham@gmail.com)")
+    st.subheader("Automated D2C Brand Discovery (zenith.ai.gowtham@gmail.com)")
 
     sent_today = ecom_lead_hunter.get_today_sent_count()
     remaining_quota = max(0, ecom_lead_hunter.DAILY_EMAIL_LIMIT - sent_today)
@@ -105,21 +110,48 @@ with tab3:
     m2.metric("Sent Today", sent_today)
     m3.metric("Remaining Quota Today", remaining_quota)
 
-    with st.form("ecom_hunt_form"):
-        col1, col2 = st.columns(2)
-        category = col1.text_input("D2C Niche / Product Category", value="Skincare & Cosmetics")
-        city = col2.text_input("Target City / Region", value="Mumbai")
-        hunt_btn = st.form_submit_button("🔍 Step 1: Discover D2C & Shopify Brands")
+    st.markdown("### 🎲 Auto-Pilot Lead Engine")
+    st.caption("Click this button to have the system randomly select a high-converting D2C niche and major target city for you.")
 
-    if hunt_btn:
-        with st.spinner(f"Scanning for standalone {category} stores in {city}..."):
-            st.session_state.ecom_leads = ecom_lead_hunter.hunt_ecom_leads(category, city)
+    if st.button("🚀 1-Click Auto-Discover Leads", use_container_width=True):
+        NICHES = [
+            "Skincare Brands", "Boutique Fitness Apparel", "Specialty Coffee Roasters", 
+            "Organic Tea Brands", "Vegan Health Foods", "Handmade Jewelry", 
+            "Men's Grooming Products", "Eco-friendly Home Decor", "Luxury Candles", 
+            "Premium Pet Supplies", "Ayurvedic Supplements", "D2C Leather Goods",
+            "Handcrafted Ceramics", "Sustainable Clothing", "Gourmet Chocolates"
+        ]
+        CITIES = [
+            "Mumbai", "Bengaluru", "New Delhi", "Pune", "Hyderabad", 
+            "Chennai", "Gurgaon", "Ahmedabad", "Jaipur", "Chandigarh"
+        ]
+        
+        st.session_state.auto_niche = random.choice(NICHES)
+        st.session_state.auto_city = random.choice(CITIES)
+
+        with st.spinner(f"Auto-Pilot Engaged! Scanning for standalone '{st.session_state.auto_niche}' in '{st.session_state.auto_city}'..."):
+            st.session_state.ecom_leads = ecom_lead_hunter.hunt_ecom_leads(st.session_state.auto_niche, st.session_state.auto_city)
+
         if not st.session_state.ecom_leads:
-            st.warning("No uncontacted stores found in that scan. Try another category like 'Fitness Apparel' or 'Specialty Coffee'.")
+            st.warning(f"Scan complete for '{st.session_state.auto_niche}' in '{st.session_state.auto_city}', but no uncontacted stores were found. Click the button again to spin a new niche!")
+        else:
+            st.success(f"Successfully found {len(st.session_state.ecom_leads)} lead(s) for '{st.session_state.auto_niche}' in '{st.session_state.auto_city}'!")
+
+    with st.expander("Manual Override (Type your own niche)"):
+        with st.form("manual_ecom_hunt_form"):
+            col1, col2 = st.columns(2)
+            category = col1.text_input("D2C Niche / Product Category", value="Streetwear")
+            city = col2.text_input("Target City / Region", value="Mumbai")
+            manual_hunt_btn = st.form_submit_button("🔍 Manual Scan")
+        if manual_hunt_btn:
+            with st.spinner(f"Scanning for standalone {category} stores in {city}..."):
+                st.session_state.ecom_leads = ecom_lead_hunter.hunt_ecom_leads(category, city)
+            if not st.session_state.ecom_leads:
+                st.warning("No uncontacted stores found in that manual scan.")
 
     leads = st.session_state.ecom_leads
     if leads:
-        st.success(f"Found {len(leads)} D2C brand lead(s)!")
+        st.divider()
         if remaining_quota > 0:
             if st.button(f"⚡ Auto-Send Top {min(len(leads), remaining_quota)} Pitches Now"):
                 for idx, lead in enumerate(leads):
@@ -138,6 +170,8 @@ with tab3:
                     else:
                         st.error(f"❌ {target_email}: {msg}")
                 st.rerun()
+        else:
+            st.warning("🔒 Daily limit of 5 automated emails reached. Lock will release tomorrow.")
 
         for idx, lead in enumerate(leads):
             target_email = lead["emails"][0]
@@ -148,11 +182,12 @@ with tab3:
                 pitch = st.text_area("Pitch:", value=lead["pitch"], height=150, key=f"epitch_{idx}")
                 subject = f"24/7 Competitor Price & Stock Alerts for {lead['business_name']}"
                 if st.button(f"🚀 Auto-Send via SMTP to {target_email}", key=f"esend_{idx}", disabled=(already_sent or remaining_quota == 0)):
-                    ok, msg = ecom_lead_hunter.send_automated_email(
-                        lead["business_name"], lead["url"], target_email, subject, pitch
-                    )
-                    if ok:
-                        st.success(msg)
-                        st.rerun()
-                    else:
-                        st.error(msg)
+                    with st.spinner("Sending..."):
+                        ok, msg = ecom_lead_hunter.send_automated_email(
+                            lead["business_name"], lead["url"], target_email, subject, pitch
+                        )
+                        if ok:
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
