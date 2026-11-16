@@ -2,7 +2,6 @@ import sqlite3
 import urllib.parse
 import pandas as pd
 import streamlit as st
-import random
 import central_core
 import price_tracker
 import ecom_lead_hunter
@@ -16,6 +15,26 @@ if "auto_niche" not in st.session_state:
     st.session_state.auto_niche = ""
 if "auto_city" not in st.session_state:
     st.session_state.auto_city = ""
+
+# The Intelligence Engine: Ordered by highest statistical probability of Shopify store density in India.
+if "smart_queue" not in st.session_state:
+    st.session_state.smart_queue = [
+        ("Skincare & Cosmetics", "Mumbai", "Mumbai is India's beauty and cosmetics D2C capital."),
+        ("Streetwear Clothing", "Bengaluru", "Bengaluru has a massive concentration of Gen-Z apparel brands."),
+        ("Health & Wellness Supplements", "New Delhi", "Delhi NCR is the top hub for health and fitness D2C brands."),
+        ("Specialty Coffee", "Bengaluru", "Bengaluru leads the premium coffee and beverage D2C market."),
+        ("Premium Home Decor", "Mumbai", "High-income demographics in Mumbai drive the luxury decor market."),
+        ("Organic Beauty Products", "Hyderabad", "Hyderabad has a rapidly growing organic and vegan beauty sector."),
+        ("D2C Ethnic Wear", "Jaipur", "Jaipur is the manufacturing and D2C hub for modern ethnic apparel."),
+        ("Vegan Food Brands", "Pune", "Pune is a major testing ground for alternative and vegan foods."),
+        ("Fitness & Gym Apparel", "Gurgaon", "Gurgaon hosts numerous independent fitness and activewear labels."),
+        ("Handcrafted Jewelry", "New Delhi", "Delhi is a massive hub for boutique and designer jewelry stores."),
+        ("Luxury Fragrances", "Mumbai", "Mumbai leads in boutique perfumes and luxury grooming."),
+        ("D2C Leather Goods", "Chennai", "Chennai is a major manufacturing and D2C hub for leather accessories."),
+        ("Organic Tea Brands", "Bengaluru", "Bengaluru has a high density of modern tea and wellness beverage startups."),
+        ("Men's Grooming Products", "New Delhi", "Delhi NCR is a prime market for men's beard and grooming brands."),
+        ("Eco-friendly Home Goods", "Bengaluru", "Bengaluru leads in sustainable and eco-friendly D2C products.")
+    ]
 
 st.title("📈 Zenith E-Commerce Competitor Price & Stock Spy")
 st.caption("Rank 2 B2B SaaS: 24/7 Competitor Price & Inventory Monitoring + Instant Telegram Alerts + D2C Auto-Lead Hunter")
@@ -59,7 +78,7 @@ with tab1:
     else:
         st.info("No competitor products tracked yet. Paste any D2C product URL above to test!")
 
-# --- TAB 2: TELEGRAM BOT CONFIG & 1-CLICK CHAT ID DETECTOR ---
+# --- TAB 2: TELEGRAM BOT CONFIG ---
 with tab2:
     st.subheader("Connect Your Telegram Alert Bot in 60 Seconds")
     st.markdown("""
@@ -98,9 +117,9 @@ with tab2:
             else:
                 st.error(msg)
 
-# --- TAB 3: 100% AUTOMATED D2C LEAD HUNTER ---
+# --- TAB 3: SMART AUTO-PILOT LEAD HUNTER ---
 with tab3:
-    st.subheader("Automated D2C Brand Discovery (zenith.ai.gowtham@gmail.com)")
+    st.subheader("Smart D2C Brand Discovery (zenith.ai.gowtham@gmail.com)")
 
     sent_today = ecom_lead_hunter.get_today_sent_count()
     remaining_quota = max(0, ecom_lead_hunter.DAILY_EMAIL_LIMIT - sent_today)
@@ -110,38 +129,34 @@ with tab3:
     m2.metric("Sent Today", sent_today)
     m3.metric("Remaining Quota Today", remaining_quota)
 
-    st.markdown("### 🎲 Auto-Pilot Lead Engine")
-    st.caption("Click this button to have the system randomly select a high-converting D2C niche and major target city for you.")
+    st.markdown("### 🧠 Smart Auto-Pilot Engine")
+    st.caption("Systematically targets the highest-density D2C markets in India to guarantee leads, without repeating searches.")
 
-    if st.button("🚀 1-Click Auto-Discover Leads", use_container_width=True):
-        NICHES = [
-            "Skincare Brands", "Boutique Fitness Apparel", "Specialty Coffee Roasters", 
-            "Organic Tea Brands", "Vegan Health Foods", "Handmade Jewelry", 
-            "Men's Grooming Products", "Eco-friendly Home Decor", "Luxury Candles", 
-            "Premium Pet Supplies", "Ayurvedic Supplements", "D2C Leather Goods",
-            "Handcrafted Ceramics", "Sustainable Clothing", "Gourmet Chocolates"
-        ]
-        CITIES = [
-            "Mumbai", "Bengaluru", "New Delhi", "Pune", "Hyderabad", 
-            "Chennai", "Gurgaon", "Ahmedabad", "Jaipur", "Chandigarh"
-        ]
-        
-        st.session_state.auto_niche = random.choice(NICHES)
-        st.session_state.auto_city = random.choice(CITIES)
-
-        with st.spinner(f"Auto-Pilot Engaged! Scanning for standalone '{st.session_state.auto_niche}' in '{st.session_state.auto_city}'..."):
-            st.session_state.ecom_leads = ecom_lead_hunter.hunt_ecom_leads(st.session_state.auto_niche, st.session_state.auto_city)
-
-        if not st.session_state.ecom_leads:
-            st.warning(f"Scan complete for '{st.session_state.auto_niche}' in '{st.session_state.auto_city}', but no uncontacted stores were found. Click the button again to spin a new niche!")
+    if st.button("🚀 1-Click Smart Discover", use_container_width=True):
+        if not st.session_state.smart_queue:
+            st.warning("You have exhausted the Top 15 markets! Refresh the page to reset the queue or use Manual Override.")
         else:
-            st.success(f"Successfully found {len(st.session_state.ecom_leads)} lead(s) for '{st.session_state.auto_niche}' in '{st.session_state.auto_city}'!")
+            # Pop the first target off the queue so it is never repeated
+            niche, city, logic = st.session_state.smart_queue.pop(0)
+            
+            st.session_state.auto_niche = niche
+            st.session_state.auto_city = city
+            
+            st.info(f"**🧠 Intelligence Engine Active:** Targeting '{niche}' in '{city}'. \n*Reasoning:* {logic}")
+
+            with st.spinner(f"Scanning for standalone '{niche}' stores in '{city}'..."):
+                st.session_state.ecom_leads = ecom_lead_hunter.hunt_ecom_leads(niche, city)
+
+            if not st.session_state.ecom_leads:
+                st.warning(f"Scan complete for '{niche}' in '{city}', but no uncontacted public emails were found. Click 'Smart Discover' again to move to the next market.")
+            else:
+                st.success(f"Successfully found {len(st.session_state.ecom_leads)} lead(s) for '{niche}' in '{city}'!")
 
     with st.expander("Manual Override (Type your own niche)"):
         with st.form("manual_ecom_hunt_form"):
             col1, col2 = st.columns(2)
-            category = col1.text_input("D2C Niche / Product Category", value="Streetwear")
-            city = col2.text_input("Target City / Region", value="Mumbai")
+            category = col1.text_input("D2C Niche / Product Category", value="Custom Keyboards")
+            city = col2.text_input("Target City / Region", value="Pune")
             manual_hunt_btn = st.form_submit_button("🔍 Manual Scan")
         if manual_hunt_btn:
             with st.spinner(f"Scanning for standalone {category} stores in {city}..."):
